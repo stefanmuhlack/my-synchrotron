@@ -695,7 +695,7 @@ const userForm = ref({
   name: '',
   email: '',
   password: '',
-  role: 'coachee' as 'admin' | 'coach' | 'coachee',
+  role: ''as'' | 'admin' | 'coach' | 'coachee',
   mandant: '',
   modulePermissions: [] as string[]
 })

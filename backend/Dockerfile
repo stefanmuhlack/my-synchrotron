@@ -33,7 +33,7 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 
 # Copy any additional files needed
-COPY --from=builder /app/public ./public
+#COPY --from=builder /app/public ./public
 
 # Change ownership to nodejs user
 RUN chown -R nodejs:nodejs /app
