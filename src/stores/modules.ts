@@ -91,7 +91,7 @@ export const useModulesStore = defineStore('modules', () => {
       if (!modules.value[key] || modules.value[key].error) return;
       
       // Call API to toggle module
-      const updatedModule = await apiService.toggleModule(key);
+      await apiService.toggleModule(key);
       
       // Update local state
       if (modules.value[key]) {

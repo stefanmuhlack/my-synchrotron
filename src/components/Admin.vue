@@ -868,9 +868,9 @@ const cancelDeleteModule = () => {
   showDeleteModal.value = false
 }
 
-const executeDeleteModule = () => {
+const executeDeleteModule = async () => {
   if (moduleToDelete.value) {
-    const success = modulesStore.deleteModule(moduleToDelete.value.key)
+    const success = await modulesStore.deleteModule(moduleToDelete.value.key)
     
     if (success) {
       console.info(`✅ Module '${moduleToDelete.value.name}' deleted successfully`)

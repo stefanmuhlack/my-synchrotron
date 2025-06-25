@@ -44,7 +44,7 @@ class ApiService {
   private token: string | null = null
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+    this.baseURL = import.meta.env.VITE_API_URL || '/api'
     this.token = localStorage.getItem('authToken')
   }
 

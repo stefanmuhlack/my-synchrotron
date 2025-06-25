@@ -274,8 +274,8 @@ export class EnhancedModuleValidator {
   // Validation Rule Implementations
 
   private async validateRequiredFields(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+     config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     const requiredFields = ['name', 'routePrefix', 'rolesAllowed', 'hasWidget']
     const missing = requiredFields.filter(field => !(field in config))
@@ -292,8 +292,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateFieldTypes(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     const errors: string[] = []
 
@@ -332,8 +332,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateRoles(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!Array.isArray(config.rolesAllowed)) {
       return {
@@ -374,8 +374,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateVersionCompatibility(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!config.compatibleWithCore) {
       return {
@@ -440,7 +440,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateDocumentation(
-    config: ModuleConfig
+   config: ModuleConfig,
+    context: ModuleValidationContext
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -471,8 +472,7 @@ export class EnhancedModuleValidator {
   }
 
   private async validateFileStructure(
-    config: ModuleConfig,
-    _context: ModuleValidationContext
+    context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!context.extractedFiles) {
       return { passed: true } // Can't validate without files
@@ -586,7 +586,7 @@ export class EnhancedModuleValidator {
 
   private async validatePerformanceOptimization(
     _config: ModuleConfig,
-    _context: ModuleValidationContext
+    context: ModuleValidationContext
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -617,7 +617,7 @@ export class EnhancedModuleValidator {
 
   private async validateCodeOrganization(
     config: ModuleConfig,
-    _context: ModuleValidationContext
+    context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!context.extractedFiles) {
       return { passed: true }
@@ -647,7 +647,7 @@ export class EnhancedModuleValidator {
 
   private async validateDependencyManagement(
     _config: ModuleConfig,
-    _context: ModuleValidationContext
+    context: ModuleValidationContext
   ): Promise<ValidationResult> {
     // Check for dependency-related issues
     const suggestions: string[] = []
@@ -682,7 +682,7 @@ export class EnhancedModuleValidator {
 
   private async calculateMetrics(
     _config: ModuleConfig, 
-    _context: ModuleValidationContext,
+    context: ModuleValidationContext,
     result: ComprehensiveValidationResult
   ): Promise<ModuleMetrics> {
     // Calculate various quality metrics

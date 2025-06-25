@@ -202,12 +202,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { 
-  FlagIcon, 
-  CheckCircleIcon, 
-  ClockIcon, 
-  ChartBarIcon, 
-  PlusIcon 
+import {
+  CheckCircleIcon,
+  ClockIcon,
+  ChartBarIcon,
+  PlusIcon
 } from '@heroicons/vue/24/outline'
 
 interface Goal {

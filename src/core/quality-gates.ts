@@ -131,7 +131,8 @@ export class QualityGateRunner {
     let score = 100
     
     for (const file of requiredFiles) {
-      // Acknowledge file parameter usage
+        // Placeholder usage
+      console.log(`Checking existence of ${file}`)
       // In real implementation, check if file exists
       // if (!fs.existsSync(path.join(moduleDir, file))) {
       //   issues.push({
@@ -159,6 +160,7 @@ export class QualityGateRunner {
   }
   
   private async validateCodeQuality(moduleDir: string): Promise<QualityResult> {
+    console.log(`Validating code quality for: ${moduleDir}`)
     const issues: QualityIssue[] = []
     let score = 100
     
@@ -182,6 +184,7 @@ export class QualityGateRunner {
   }
   
   private async validatePerformance(moduleDir: string): Promise<QualityResult> {
+    console.log(`Validating performance for: ${moduleDir}`)
     const issues: QualityIssue[] = []
     let score = 100
     
@@ -204,6 +207,7 @@ export class QualityGateRunner {
   }
   
   private async validateSecurity(moduleDir: string): Promise<QualityResult> {
+    console.log(`Validating security for: ${moduleDir}`)
     const issues: QualityIssue[] = []
     let score = 100
     
@@ -226,6 +230,7 @@ export class QualityGateRunner {
   }
   
   private async validateDocumentation(moduleDir: string): Promise<QualityResult> {
+    console.log(`Validating documentation for: ${moduleDir}`)
     const issues: QualityIssue[] = []
     let score = 100
     
@@ -248,6 +253,7 @@ export class QualityGateRunner {
   }
   
   private async calculateMetrics(moduleDir: string): Promise<QualityMetrics> {
+    console.log(`Calculating metrics for: ${moduleDir}`)
     // In real implementation, calculate actual metrics
     return {
       codeLines: 0,

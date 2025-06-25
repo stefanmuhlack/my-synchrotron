@@ -158,16 +158,7 @@ const handleAction = () => {
     const errors: string[] = []
     const warnings: string[] = []
     
-    // Check required files
-    const _requiredFiles = [
-      'module.config.ts',
-      'views/MainView.vue',
-      'types/index.ts',
-      'tests/module.spec.ts',
-      'README.md'
-    ]
-    
-    // In a real implementation, you would check if these files exist
+    // Check required files (in real implementation this would verify each file)
     // and validate their content
     
     return {
