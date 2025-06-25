@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      target: builder
+    container_name: sgblock-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:3000
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - sgblock-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: sgblock-backend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://dev:dev@mongodb:27017/sgblock_dev?authSource=admin
+      - JWT_SECRET=dev-secret-key
+      - CORS_ORIGIN=http://localhost:5173
+    command: npm run dev
+    depends_on:
+      - mongodb
+    networks:
+      - sgblock-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: sgblock-mongodb-dev
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=dev
+      - MONGO_INITDB_ROOT_PASSWORD=dev
+      - MONGO_INITDB_DATABASE=sgblock_dev
+    volumes:
+      - mongodb_dev_data:/data/db
+    networks:
+      - sgblock-network
+
+volumes:
+  mongodb_dev_data:
+
+networks:
+  sgblock-network:
+    driver: bridge

@@ -1,0 +1,69 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "admin@example.com",
+      "password": "admin123",
+      "hashedPassword": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "name": "System Administrator",
+      "role": "admin",
+      "mandant": "*",
+      "avatar": "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1"
+    },
+    {
+      "id": "2",
+      "email": "coach1@example.com",
+      "password": "coach123",
+      "hashedPassword": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+      "name": "John Coach",
+      "role": "coach",
+      "mandant": "*",
+      "avatar": "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1",
+      "modulePermissions": ["goals", "tasks", "sgnb"]
+    },
+    {
+      "id": "3",
+      "email": "coach2@example.com",
+      "password": "coach123",
+      "hashedPassword": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+      "name": "Jane Coach",
+      "role": "coach",
+      "mandant": "*",
+      "avatar": "https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1",
+      "modulePermissions": ["goals", "tasks"]
+    },
+    {
+      "id": "4",
+      "email": "coachee1@example.com",
+      "password": "coachee123",
+      "hashedPassword": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "name": "Alice Coachee",
+      "role": "coachee",
+      "mandant": "2",
+      "avatar": "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1",
+      "modulePermissions": ["goals", "tasks"]
+    },
+    {
+      "id": "5",
+      "email": "coachee2@example.com",
+      "password": "coachee123",
+      "hashedPassword": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "name": "Bob Coachee",
+      "role": "coachee",
+      "mandant": "2",
+      "avatar": "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1",
+      "modulePermissions": ["goals"]
+    },
+    {
+      "id": "6",
+      "email": "coachee3@example.com",
+      "password": "coachee123",
+      "hashedPassword": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "name": "Carol Coachee",
+      "role": "coachee",
+      "mandant": "3",
+      "avatar": "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=64&h=64&dpr=1",
+      "modulePermissions": ["tasks", "checklists"]
+    }
+  ]
+}

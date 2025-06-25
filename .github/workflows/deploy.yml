@@ -1,0 +1,53 @@
+name: Full Stack Deployment
+
+on:
+  workflow_run:
+    workflows: ["Frontend CI/CD", "Backend CI/CD"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy Full Stack
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Deploy Full Stack via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/sgblock
+            
+            # Pull latest images
+            docker-compose pull
+            
+            # Update and restart services
+            docker-compose up -d
+            
+            # Clean up old images
+            docker system prune -f
+            
+            # Health check
+            sleep 30
+            curl -f http://localhost:3000/health || exit 1
+            curl -f http://localhost:8080/api/health || exit 1
+            
+            echo "Deployment completed successfully"
+            
+      - name: Notify deployment status
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
