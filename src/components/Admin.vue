@@ -141,21 +141,30 @@
                   </span>
                 </td>
                 <td class="py-4 px-4">
-                  <button
-                    v-if="!module.error"
-                    @click="toggleModule(module.key)"
-                    :class="module.enabled ? 'btn-secondary' : 'btn-primary'"
-                    class="text-sm"
-                  >
-                    {{ module.enabled ? 'Disable' : 'Enable' }}
-                  </button>
-                  <button
-                    v-else
-                    @click="clearModuleError(module.key)"
-                    class="btn-primary text-sm"
-                  >
-                    Clear Error
-                  </button>
+                  <div class="flex space-x-2">
+                    <button
+                      v-if="!module.error"
+                      @click="toggleModule(module.key)"
+                      :class="module.enabled ? 'btn-secondary' : 'btn-primary'"
+                      class="text-sm"
+                    >
+                      {{ module.enabled ? 'Disable' : 'Enable' }}
+                    </button>
+                    <button
+                      v-else
+                      @click="clearModuleError(module.key)"
+                      class="btn-primary text-sm"
+                    >
+                      Clear Error
+                    </button>
+                    <button
+                      @click="confirmDeleteModule(module.key, module.config.name)"
+                      class="btn-secondary text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                      title="Delete module"
+                    >
+                      <TrashIcon class="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -644,6 +653,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Module Confirmation Modal -->
+    <div 
+      v-if="showDeleteModal" 
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <div class="flex items-center mb-4">
+          <ExclamationTriangleIcon class="w-8 h-8 text-red-400 mr-3" />
+          <h3 class="text-xl font-semibold text-white">Delete Module</h3>
+        </div>
+        
+        <div class="mb-6">
+          <p class="text-gray-300 mb-2">
+            Are you sure you want to delete the module <strong>"{{ moduleToDelete?.name }}"</strong>?
+          </p>
+          <p class="text-sm text-red-400">
+            This action cannot be undone. The module will be completely removed from the system.
+          </p>
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+          <button 
+            @click="cancelDeleteModule"
+            class="btn-secondary"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="executeDeleteModule"
+            class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            <TrashIcon class="w-4 h-4 mr-2 inline" />
+            Delete Module
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -654,6 +701,7 @@ import { useModulesStore } from '@/stores/modules'
 import { useModuleLifecycleStore } from '@/core/moduleLifecycle'
 import { moduleRegistry } from '@/core/registry'
 import { CORE_VERSION } from '@/constants/version'
+import type { User, UserRole } from '@/types'
 import { 
   ArrowPathIcon, 
   PlusIcon, 
@@ -663,14 +711,15 @@ import {
   AcademicCapIcon,
   CheckCircleIcon,
   XCircleIcon,
-  XMarkIcon
+  XMarkIcon,
+  TrashIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 import ModuleTestPanel from './ModuleTestPanel.vue'
 import ModuleUploadPanel from './ModuleUploadPanel.vue'
 import VersionMismatchReport from './VersionMismatchReport.vue'
 import ModuleLifecyclePanel from './ModuleLifecyclePanel.vue'
 import ModuleHealthMonitor from './ModuleHealthMonitor.vue'
-import type { User } from '@/types'
 
 const authStore = useAuthStore()
 const modulesStore = useModulesStore()
@@ -680,8 +729,10 @@ const activeTab = ref<'modules' | 'upload' | 'users' | 'tests' | 'versions' | 'l
 const showCreateModal = ref(false)
 const showModuleModal = ref(false)
 const showModuleDetailsModal = ref(false)
+const showDeleteModal = ref(false)
 const editingUser = ref<User | null>(null)
 const selectedUser = ref<User | null>(null)
+const moduleToDelete = ref<{ key: string; name: string } | null>(null)
 
 // User management filters and pagination
 const roleFilter = ref('')
@@ -695,7 +746,7 @@ const userForm = ref({
   name: '',
   email: '',
   password: '',
-  role: ''as'' | 'admin' | 'coach' | 'coachee',
+  role: 'coachee' as UserRole,
   mandant: '',
   modulePermissions: [] as string[]
 })
@@ -753,13 +804,13 @@ const paginatedUsers = computed(() => {
 
 const totalPages = computed(() => Math.ceil(filteredUsers.value.length / pageSize.value))
 
-// User stats
+// User stats with robust role filtering
 const adminCount = computed(() => authStore.users.filter(u => u.role === 'admin').length)
 const coachCount = computed(() => authStore.users.filter(u => u.role === 'coach').length)
 const coacheeCount = computed(() => authStore.users.filter(u => u.role === 'coachee').length)
 
 // Helper functions
-const getRoleColor = (role: string) => {
+const getRoleColor = (role: UserRole) => {
   switch (role) {
     case 'admin': return 'bg-red-500 text-white'
     case 'coach': return 'bg-green-500 text-white'
@@ -803,6 +854,37 @@ const refreshModules = async () => {
 
 const clearModuleError = (key: string) => {
   modulesStore.clearModuleError(key)
+}
+
+const confirmDeleteModule = (key: string, name: string) => {
+  moduleToDelete.value = { key, name }
+  showDeleteModal.value = true
+}
+
+const cancelDeleteModule = () => {
+  moduleToDelete.value = null
+  showDeleteModal.value = false
+}
+
+const executeDeleteModule = () => {
+  if (moduleToDelete.value) {
+    const success = modulesStore.deleteModule(moduleToDelete.value.key)
+    
+    if (success) {
+      console.info(`✅ Module '${moduleToDelete.value.name}' deleted successfully`)
+      
+      // Also remove from lifecycle store if it exists
+      try {
+        lifecycleStore.unregisterModule(moduleToDelete.value.key)
+      } catch (error) {
+        console.warn(`Module '${moduleToDelete.value.key}' not found in lifecycle store`)
+      }
+    } else {
+      console.error(`❌ Failed to delete module '${moduleToDelete.value.name}'`)
+    }
+  }
+  
+  cancelDeleteModule()
 }
 
 // User management functions

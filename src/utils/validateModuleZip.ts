@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
-import type { ModuleConfig } from '@/types'
+import type { ModuleConfig, UserRole } from '@/types'
+import { VALID_ROLES, validateRoles } from '@/types'
 import { CORE_VERSION } from '@/constants/version'
 import { useModuleStatusStore } from '@/stores/moduleStatus'
 import semver from 'semver'
@@ -311,7 +312,7 @@ async function validateModuleConfig(zip: JSZip): Promise<{ config?: ModuleConfig
     if (configValidation.config) {
       config = configValidation.config
       
-      // Validate config fields
+      // Validate config fields with robust role checking
       const fieldValidation = validateConfigFields(config)
       errors.push(...fieldValidation.errors)
       warnings.push(...fieldValidation.warnings)
@@ -357,14 +358,21 @@ function parseModuleConfig(content: string): { config?: ModuleConfig, errors: st
       return match ? match[1] : undefined
     }
     
-    // Extract array properties
+    // Extract array properties with robust role validation
     const extractArrayProp = (prop: string) => {
       const match = configStr.match(new RegExp(`${prop}\\s*:\\s*\\[([^\\]]*?)\\]`))
       if (match) {
-        return match[1]
+        const items = match[1]
           .split(',')
           .map(item => item.trim().replace(/['"`]/g, ''))
           .filter(item => item.length > 0)
+        
+        // If this is rolesAllowed, validate roles
+        if (prop === 'rolesAllowed') {
+          return validateRoles(items)
+        }
+        
+        return items
       }
       return undefined
     }
@@ -406,7 +414,7 @@ function parseModuleConfig(content: string): { config?: ModuleConfig, errors: st
 }
 
 /**
- * Validate configuration fields
+ * Validate configuration fields with robust role checking
  */
 function validateConfigFields(config: ModuleConfig): { errors: string[], warnings: string[] } {
   const errors: string[] = []
@@ -424,14 +432,16 @@ function validateConfigFields(config: ModuleConfig): { errors: string[], warning
   if (!config.rolesAllowed || !Array.isArray(config.rolesAllowed) || config.rolesAllowed.length === 0) {
     errors.push('Field "rolesAllowed" is required and must be a non-empty array')
   } else {
-    // Validate roles
-    const validRoles = ['admin', 'coach', 'coachee', 'user']
-    const invalidRoles = config.rolesAllowed.filter(role => 
-      typeof role !== 'string' || !validRoles.includes(role)
-    )
+    // Robust role validation
+    const validRoles = validateRoles(config.rolesAllowed)
+    const invalidRoles = config.rolesAllowed.filter(role => !VALID_ROLES.includes(role))
     
     if (invalidRoles.length > 0) {
-      errors.push(`Invalid roles: ${invalidRoles.join(', ')}. Valid roles: ${validRoles.join(', ')}`)
+      errors.push(`Invalid roles: ${invalidRoles.join(', ')}. Valid roles: ${VALID_ROLES.join(', ')}`)
+    }
+    
+    if (validRoles.length === 0) {
+      errors.push('No valid roles found in "rolesAllowed"')
     }
   }
   
@@ -595,4 +605,15 @@ export function generateValidationReport(result: ModuleValidationResult): string
   }
   
   return lines.join('\n')
+}
+
+/**
+ * Validate module ZIP from path (browser environment limitation)
+ */
+export async function validateModuleZipFromPath(path: string): Promise<ModuleValidationResult> {
+  return {
+    valid: false,
+    errors: ['File path validation not supported in browser environment'],
+    warnings: []
+  }
 }

@@ -1,4 +1,5 @@
-import type { ModuleConfig } from '@/types'
+import type { ModuleConfig, UserRole } from '@/types'
+import { VALID_ROLES, validateRoles } from '@/types'
 import { CORE_VERSION } from '@/constants/version'
 import { useModuleStatusStore } from '@/stores/moduleStatus'
 import semver from 'semver'
@@ -165,7 +166,7 @@ export class ModuleTestRunner {
       // Validate required fields
       this.validateRequiredFields(config, result)
       
-      // Validate field types and values
+      // Validate field types and values with robust role checking
       this.validateFieldTypes(config, result)
       
       // Validate version compatibility (ENHANCED)
@@ -215,7 +216,7 @@ export class ModuleTestRunner {
       result.valid = false
     }
 
-    // Validate rolesAllowed
+    // Robust role validation
     if (!Array.isArray(config.rolesAllowed)) {
       result.errors.push('Field "rolesAllowed" must be an array')
       result.valid = false
@@ -223,12 +224,17 @@ export class ModuleTestRunner {
       result.errors.push('Field "rolesAllowed" must contain at least one role')
       result.valid = false
     } else {
-      const validRoles = ['admin', 'coach', 'coachee', 'user']
-      const invalidRoles = config.rolesAllowed.filter(role => 
-        typeof role !== 'string' || !validRoles.includes(role)
-      )
+      // Use robust role validation
+      const validRoles = validateRoles(config.rolesAllowed)
+      const invalidRoles = config.rolesAllowed.filter(role => !VALID_ROLES.includes(role))
+      
       if (invalidRoles.length > 0) {
-        result.errors.push(`Invalid roles in "rolesAllowed": ${invalidRoles.join(', ')}. Valid roles: ${validRoles.join(', ')}`)
+        result.errors.push(`Invalid roles in "rolesAllowed": ${invalidRoles.join(', ')}. Valid roles: ${VALID_ROLES.join(', ')}`)
+        result.valid = false
+      }
+      
+      if (validRoles.length === 0) {
+        result.errors.push('No valid roles found in "rolesAllowed"')
         result.valid = false
       }
     }

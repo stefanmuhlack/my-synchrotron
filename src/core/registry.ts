@@ -1,4 +1,5 @@
-import type { ModuleConfig } from '@/types'
+import type { ModuleConfig, UserRole } from '@/types'
+import { VALID_ROLES, validateRoles } from '@/types'
 import { useModulesStore } from '@/stores/modules'
 import { CORE_VERSION } from '@/constants/version'
 import semver from 'semver'
@@ -337,7 +338,7 @@ export class ModuleRegistry {
   }
 
   /**
-   * Validate module configuration against required schema
+   * Validate module configuration against required schema with robust role checking
    */
   private validateModuleConfig(config: any): ModuleValidationResult {
     const result: ModuleValidationResult = {
@@ -371,6 +372,7 @@ export class ModuleRegistry {
       }
     }
 
+    // Robust role validation
     if (config.rolesAllowed !== undefined) {
       if (!Array.isArray(config.rolesAllowed)) {
         result.errors.push('Field "rolesAllowed" must be an array')
@@ -379,12 +381,12 @@ export class ModuleRegistry {
         result.errors.push('Field "rolesAllowed" must contain at least one role')
         result.isValid = false
       } else {
-        const validRoles = ['admin', 'coach', 'coachee', 'user']
+        // Validate roles against VALID_ROLES
         const invalidRoles = config.rolesAllowed.filter((role: any) => 
-          typeof role !== 'string' || !validRoles.includes(role)
+          typeof role !== 'string' || !VALID_ROLES.includes(role as UserRole)
         )
         if (invalidRoles.length > 0) {
-          result.errors.push(`Invalid roles in "rolesAllowed": ${invalidRoles.join(', ')}. Valid roles: ${validRoles.join(', ')}`)
+          result.errors.push(`Invalid roles in "rolesAllowed": ${invalidRoles.join(', ')}. Valid roles: ${VALID_ROLES.join(', ')}`)
           result.isValid = false
         }
       }
@@ -478,7 +480,7 @@ export class ModuleRegistry {
     return {
       name: `Failed Module: ${moduleKey}`,
       routePrefix: moduleKey,
-      rolesAllowed: [],
+      rolesAllowed: ['admin'], // Safe fallback
       hasWidget: false,
       description: 'This module failed to load properly'
     }

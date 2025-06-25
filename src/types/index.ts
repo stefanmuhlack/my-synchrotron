@@ -1,10 +1,12 @@
+export type UserRole = 'admin' | 'coach' | 'coachee';
+
 export interface User {
   id: string;
   name: string;
   email: string;
   password?: string; // For backward compatibility
   hashedPassword?: string;
-  role: 'admin' | 'coach' | 'coachee';
+  role: UserRole;
   mandant: string; // coach ID or "*" for admin
   avatar?: string;
   modulePermissions?: string[]; // Array of module keys the user can access
@@ -13,7 +15,7 @@ export interface User {
 export interface ModuleConfig {
   name: string;
   routePrefix: string;
-  rolesAllowed: ('admin' | 'coach' | 'coachee')[];
+  rolesAllowed: UserRole[];
   hasWidget: boolean;
   routes?: () => Promise<any[]>;
   widget?: () => Promise<any>;
@@ -66,4 +68,19 @@ export interface UserSession {
 
 export interface UsersData {
   users: User[];
+}
+
+// Role validation utilities
+export const VALID_ROLES: UserRole[] = ['admin', 'coach', 'coachee'];
+
+export function isValidRole(role: string): role is UserRole {
+  return VALID_ROLES.includes(role as UserRole);
+}
+
+export function validateRoles(roles: string[]): UserRole[] {
+  return roles.filter(isValidRole);
+}
+
+export function ensureValidRole(role: string, fallback: UserRole = 'coachee'): UserRole {
+  return isValidRole(role) ? role : fallback;
 }

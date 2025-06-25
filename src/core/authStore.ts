@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { verifyPassword, hashPassword } from '@/utils/hashPassword'
-import type { User, UserSession, UsersData } from '@/types'
+import type { User, UserSession, UsersData, UserRole } from '@/types'
+import { VALID_ROLES, isValidRole, ensureValidRole } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -11,7 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   
   const sessionDuration = 24 * 60 * 60 * 1000 // 24 hours
 
-  // Load users from JSON file
+  // Load users from JSON file with role validation
   const loadUsers = async (): Promise<void> => {
     try {
       const response = await fetch('/data/users.json')
@@ -19,22 +20,29 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error('Failed to load users')
       }
       const data: UsersData = await response.json()
-      users.value = data.users
+      
+      // Validate and sanitize user roles
+      users.value = data.users.map(user => ({
+        ...user,
+        role: ensureValidRole(user.role)
+      }))
     } catch (err) {
       console.error('Failed to load users:', err)
       error.value = 'Failed to load user data'
     }
   }
 
-  // Multi-tenant filtering
+  // Multi-tenant filtering with robust role checking
   const accessibleUsers = computed(() => {
     if (!user.value) return []
     
-    if (user.value.role === 'admin') {
+    const currentUserRole = user.value.role
+    
+    if (currentUserRole === 'admin') {
       return users.value // Admin sees all users
     }
     
-    if (user.value.role === 'coach') {
+    if (currentUserRole === 'coach') {
       return users.value.filter(u => 
         u.mandant === user.value!.id || u.id === user.value!.id
       )
@@ -96,9 +104,15 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
 
+      // Validate and ensure role is correct
+      const validatedUser: User = {
+        ...foundUser,
+        role: ensureValidRole(foundUser.role)
+      }
+
       // Create session
       const session: UserSession = {
-        user: { ...foundUser },
+        user: validatedUser,
         loginTime: new Date().toISOString(),
         expiresAt: new Date(Date.now() + sessionDuration).toISOString()
       }
@@ -143,7 +157,10 @@ export const useAuthStore = defineStore('auth', () => {
       // Validate user still exists and data is current
       const currentUser = users.value.find(u => u.id === session.user.id)
       if (currentUser) {
-        user.value = currentUser
+        user.value = {
+          ...currentUser,
+          role: ensureValidRole(currentUser.role)
+        }
       } else {
         localStorage.removeItem('userSession')
       }
@@ -153,12 +170,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const hasRole = (role: string): boolean => {
+  const hasRole = (role: UserRole): boolean => {
     return user.value?.role === role
   }
 
-  const hasAnyRole = (roles: string[]): boolean => {
-    return user.value ? roles.includes(user.value.role) : false
+  const hasAnyRole = (roles: UserRole[]): boolean => {
+    if (!user.value) return false
+    return roles.includes(user.value.role)
   }
 
   const canAccessUser = (targetUserId: string): boolean => {
@@ -174,16 +192,20 @@ export const useAuthStore = defineStore('auth', () => {
     return targetUserId === user.value.id
   }
 
-  // CRUD operations for admin
+  // CRUD operations for admin with role validation
   const createUser = async (userData: Omit<User, 'id' | 'hashedPassword'> & { password: string }): Promise<boolean> => {
     if (!hasRole('admin')) return false
     
     try {
+      // Validate role
+      const validatedRole = ensureValidRole(userData.role)
+      
       const hashedPassword = await hashPassword(userData.password)
       
       const newUser: User = {
         ...userData,
         id: Date.now().toString(),
+        role: validatedRole,
         hashedPassword,
         modulePermissions: userData.modulePermissions || []
       }
@@ -193,7 +215,6 @@ export const useAuthStore = defineStore('auth', () => {
       Object.assign(newUser, userWithoutPassword)
       
       users.value.push(newUser)
-      // In a real app, this would save to the backend
       return true
     } catch (err) {
       console.error('Failed to create user:', err)
@@ -209,6 +230,11 @@ export const useAuthStore = defineStore('auth', () => {
       if (userIndex === -1) return false
       
       const updateData = { ...userData }
+      
+      // Validate role if provided
+      if (updateData.role) {
+        updateData.role = ensureValidRole(updateData.role)
+      }
       
       // Hash password if provided
       if (userData.password) {

@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { ModuleState, ModuleConfig } from '@/types';
-import { useAuthStore } from './auth';
+import type { ModuleState, ModuleConfig, UserRole } from '@/types';
+import { VALID_ROLES, validateRoles } from '@/types';
+import { useAuthStore } from '@/core/authStore';
 
 export const useModulesStore = defineStore('modules', () => {
   const modules = ref<Record<string, ModuleState>>({});
@@ -18,13 +19,19 @@ export const useModulesStore = defineStore('modules', () => {
   const userAccessibleModules = computed(() => {
     if (!authStore.user) return [];
     
+    const userRole = authStore.user.role;
+    
     return enabledModules.value.filter(module => {
       try {
+        // Robust role checking with fallback
+        const moduleRoles = module.config.rolesAllowed || [];
+        const validModuleRoles = validateRoles(moduleRoles);
+        
         // Check if user's role is allowed for this module
-        const roleAllowed = module.config.rolesAllowed.includes(authStore.user!.role);
+        const roleAllowed = validModuleRoles.includes(userRole);
         
         // For non-admin users, also check module permissions
-        if (authStore.user!.role !== 'admin' && authStore.user!.modulePermissions) {
+        if (userRole !== 'admin' && authStore.user!.modulePermissions) {
           const modulePermissionGranted = authStore.user!.modulePermissions.includes(module.key);
           return roleAllowed && modulePermissionGranted;
         }
@@ -55,8 +62,19 @@ export const useModulesStore = defineStore('modules', () => {
         throw new Error('Invalid module key or config');
       }
 
+      // Validate and sanitize roles
+      const validatedConfig: ModuleConfig = {
+        ...config,
+        rolesAllowed: validateRoles(config.rolesAllowed)
+      };
+
+      if (validatedConfig.rolesAllowed.length === 0) {
+        console.warn(`Module ${key} has no valid roles, defaulting to admin only`);
+        validatedConfig.rolesAllowed = ['admin'];
+      }
+
       modules.value[key] = {
-        config,
+        config: validatedConfig,
         enabled: true,
         installed: true,
         error: null
@@ -77,13 +95,31 @@ export const useModulesStore = defineStore('modules', () => {
     }
   };
 
+  const deleteModule = (key: string): boolean => {
+    try {
+      if (!modules.value[key]) {
+        console.warn(`Module ${key} not found for deletion`);
+        return false;
+      }
+
+      // Remove module from registry
+      delete modules.value[key];
+      
+      console.info(`✅ Module '${key}' deleted successfully`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to delete module ${key}:`, error);
+      return false;
+    }
+  };
+
   const setModuleError = (key: string, error: string): void => {
     if (!modules.value[key]) {
       modules.value[key] = {
         config: {
           name: key,
           routePrefix: key,
-          rolesAllowed: [],
+          rolesAllowed: ['admin'], // Safe fallback
           hasWidget: false
         },
         enabled: false,
@@ -167,6 +203,7 @@ export const useModulesStore = defineStore('modules', () => {
     getAllAvailableModules,
     registerModule,
     toggleModule,
+    deleteModule,
     setModuleError,
     clearModuleError,
     getModuleRoutes,
