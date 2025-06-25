@@ -413,8 +413,7 @@ export class EnhancedModuleValidator {
   }
 
   private async validateNamingConventions(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -441,8 +440,7 @@ export class EnhancedModuleValidator {
   }
 
   private async validateDocumentation(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -473,8 +471,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateFileStructure(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!context.extractedFiles) {
       return { passed: true } // Can't validate without files
@@ -558,8 +556,7 @@ export class EnhancedModuleValidator {
   }
 
   private async validateSecurityPractices(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -581,16 +578,15 @@ export class EnhancedModuleValidator {
   }
 
   private async validatePermissionModel(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig
   ): Promise<ValidationResult> {
     // This is a placeholder for more complex permission validation
     return { passed: true }
   }
 
   private async validatePerformanceOptimization(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    _config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     const suggestions: string[] = []
 
@@ -612,16 +608,16 @@ export class EnhancedModuleValidator {
   }
 
   private async validateBundleSize(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    _config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     // This would require actual bundle analysis in a real implementation
     return { passed: true }
   }
 
   private async validateCodeOrganization(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     if (!context.extractedFiles) {
       return { passed: true }
@@ -650,8 +646,8 @@ export class EnhancedModuleValidator {
   }
 
   private async validateDependencyManagement(
-    config: ModuleConfig, 
-    context: ModuleValidationContext
+    _config: ModuleConfig,
+    _context: ModuleValidationContext
   ): Promise<ValidationResult> {
     // Check for dependency-related issues
     const suggestions: string[] = []
@@ -685,8 +681,8 @@ export class EnhancedModuleValidator {
   }
 
   private async calculateMetrics(
-    config: ModuleConfig, 
-    context: ModuleValidationContext,
+    _config: ModuleConfig, 
+    _context: ModuleValidationContext,
     result: ComprehensiveValidationResult
   ): Promise<ModuleMetrics> {
     // Calculate various quality metrics

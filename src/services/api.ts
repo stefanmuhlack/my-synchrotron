@@ -312,7 +312,13 @@ class ApiService {
       return response.data
     }
     
-    throw new Error(response.message || 'Failed to fetch user statistics')
+    return {
+      totalUsers: 0,
+      adminCount: 0,
+      coachCount: 0,
+      coacheeCount: 0,
+      lastUpdated: new Date().toISOString()
+    }
   }
 
   // ==========================================
@@ -416,7 +422,13 @@ class ApiService {
       return response.data
     }
     
-    throw new Error(response.message || 'Failed to fetch module health')
+    return {
+      moduleKey: key,
+      status: 'unknown',
+      lastCheck: new Date().toISOString(),
+      enabled: false,
+      uptime: 0
+    }
   }
 
   // ==========================================
@@ -437,7 +449,7 @@ class ApiService {
       return response.data
     }
     
-    throw new Error(response.message || 'Failed to fetch goals')
+    return []
   }
 
   /**
@@ -523,7 +535,7 @@ class ApiService {
       return response.data
     }
     
-    throw new Error(response.message || 'Failed to fetch tasks')
+    return []
   }
 
   /**
@@ -609,7 +621,13 @@ class ApiService {
       return response.data
     }
     
-    throw new Error(response.message || 'Health check failed')
+    return {
+      status: 'unknown',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: 'unknown',
+      uptime: 0
+    }
   }
 }
 

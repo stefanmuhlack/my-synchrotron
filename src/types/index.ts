@@ -17,6 +17,7 @@ export interface ModuleConfig {
   routePrefix: string;
   rolesAllowed: UserRole[];
   hasWidget: boolean;
+  enabled?: boolean;
   routes?: () => Promise<any[]>;
   widget?: () => Promise<any>;
   description?: string;

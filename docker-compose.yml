@@ -1,8 +1,9 @@
-
-
+version: "3.9"
 services:
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: sgblock-frontend
     ports:
       - "8080:80"
@@ -15,7 +16,7 @@ services:
       - sgblock-network
 
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/backend:latest
+    build: ./backend
     container_name: sgblock-backend
     ports:
       - "3000:3000"
@@ -42,23 +43,6 @@ services:
       - MONGO_INITDB_DATABASE=sgblock
     volumes:
       - mongodb_data:/data/db
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-    restart: unless-stopped
-    networks:
-      - sgblock-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: sgblock-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - frontend
-      - backend
     restart: unless-stopped
     networks:
       - sgblock-network

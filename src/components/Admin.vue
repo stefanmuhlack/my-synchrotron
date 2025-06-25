@@ -142,21 +142,23 @@
                 </td>
                 <td class="py-4 px-4">
                   <div class="flex space-x-2">
-                    <button
-                      v-if="!module.error"
-                      @click="toggleModule(module.key)"
-                      :class="module.enabled ? 'btn-secondary' : 'btn-primary'"
-                      class="text-sm"
-                    >
-                      {{ module.enabled ? 'Disable' : 'Enable' }}
-                    </button>
-                    <button
-                      v-else
-                      @click="clearModuleError(module.key)"
-                      class="btn-primary text-sm"
-                    >
-                      Clear Error
-                    </button>
+                    <template v-if="!module.error">
+                      <button
+                        @click="toggleModule(module.key)"
+                        :class="module.enabled ? 'btn-secondary' : 'btn-primary'"
+                        class="text-sm"
+                      >
+                        {{ module.enabled ? 'Disable' : 'Enable' }}
+                      </button>
+                    </template>
+                    <template v-else>
+                      <button
+                        @click="clearModuleError(module.key)"
+                        class="btn-primary text-sm"
+                      >
+                        Clear Error
+                      </button>
+                    </template>
                     <button
                       @click="confirmDeleteModule(module.key, module.config.name)"
                       class="btn-secondary text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20"

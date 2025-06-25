@@ -95,7 +95,7 @@ export const useModulesStore = defineStore('modules', () => {
       
       // Update local state
       if (modules.value[key]) {
-        modules.value[key].enabled = updatedModule.enabled;
+        modules.value[key].enabled = !modules.value[key].enabled;
       }
     } catch (error) {
       console.error(`Failed to toggle module ${key}:`, error);
