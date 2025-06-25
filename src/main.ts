@@ -5,7 +5,6 @@ import App from './App.vue'
 import router, { loadModuleRoutes } from './router'
 import { moduleRegistry } from './core/registry'
 import { useAuthStore } from './core/authStore'
-import { useModuleLifecycleStore } from './core/moduleLifecycle'
 import { HotReloadSystem } from './core/hotReloa'
 
 async function initApp() {
@@ -19,9 +18,6 @@ async function initApp() {
     // Initialize auth store
     const authStore = useAuthStore()
     await authStore.initAuth()
-    
-    // Initialize module lifecycle store
-    const lifecycleStore = useModuleLifecycleStore()
     
     // Load modules
     console.info('🔄 Loading modules...')

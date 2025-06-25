@@ -50,18 +50,18 @@ export class HotReloadSystem {
     // Watch for changes to module.config.ts files
     const moduleConfigFiles = import.meta.glob('../modules/*/module.config.ts', { eager: false })
     
-    for (const [path, importFn] of Object.entries(moduleConfigFiles)) {
+    for (const [path] of Object.entries(moduleConfigFiles)) {
       const moduleKey = this.extractModuleKey(path)
       
       // Set up watcher for this module
-      this.watchModule(moduleKey, path, importFn)
+      this.watchModule(moduleKey, path)
     }
   }
 
   /**
    * Watch a specific module for changes
    */
-  private watchModule(moduleKey: string, path: string, importFn: () => Promise<any>): void {
+  private watchModule(moduleKey: string, path: string): void {
     // In a real implementation, this would use Vite's HMR API
     // For demonstration, we'll use a simulated approach
     
@@ -70,7 +70,7 @@ export class HotReloadSystem {
     // Store the watcher function for later cleanup
     const watcher = () => {
       console.info(`📝 Detected change in module: ${moduleKey}`)
-      this.reloadModule(moduleKey, importFn)
+      this.reloadModule(moduleKey)
     }
     
     this.fileWatchers.set(moduleKey, watcher)
@@ -102,7 +102,7 @@ export class HotReloadSystem {
   /**
    * Reload a module
    */
-  private reloadModule(moduleKey: string, importFn: () => Promise<any>): void {
+  private reloadModule(moduleKey: string): void {
     if (!this.isEnabled) {
       console.warn(`Hot reload is disabled, skipping reload of module: ${moduleKey}`)
       return

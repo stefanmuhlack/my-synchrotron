@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { ModuleState, ModuleConfig, UserRole } from '@/types';
-import { VALID_ROLES, validateRoles } from '@/types';
+import type { ModuleState, ModuleConfig } from '@/types';
+import { validateRoles } from '@/types';
 import { useAuthStore } from '@/core/authStore';
 
 export const useModulesStore = defineStore('modules', () => {

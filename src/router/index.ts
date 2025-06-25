@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/core/authStore';
+import type { UserRole } from '@/types';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -20,7 +21,7 @@ const router = createRouter({
       path: '/admin',
       name: 'Admin',
       component: () => import('@/components/Admin.vue'),
-      meta: { requiresAuth: true, requiresRole: 'admin' }
+      meta: { requiresAuth: true, requiresRole: 'admin' as UserRole }
     },
     {
       path: '/unauthorized',
@@ -36,7 +37,7 @@ const router = createRouter({
 });
 
 // Global navigation guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
   
   // Initialize auth if not done
@@ -51,12 +52,12 @@ router.beforeEach(async (to, from, next) => {
   }
   
   // Check role-based access
-  if (to.meta.requiresRole && !authStore.hasRole(to.meta.requiresRole as string)) {
+  if (to.meta.requiresRole && !authStore.hasRole(to.meta.requiresRole as UserRole)) {
     next('/unauthorized');
     return;
   }
   
-  if (to.meta.requiresAnyRole && !authStore.hasAnyRole(to.meta.requiresAnyRole as string[])) {
+  if (to.meta.requiresAnyRole && !authStore.hasAnyRole(to.meta.requiresAnyRole as UserRole[])) {
     next('/unauthorized');
     return;
   }

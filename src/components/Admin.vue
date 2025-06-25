@@ -573,7 +573,7 @@
           <form @submit.prevent="saveModulePermissions">
             <div class="space-y-3 max-h-60 overflow-y-auto mb-6">
               <label 
-                v-for="module in allAvailableModules.filter(m => m.rolesAllowed.includes(selectedUser?.role || ''))" 
+                v-for="module in allAvailableModules.filter(m => m.rolesAllowed.includes(selectedUser?.role || 'coachee'))" 
                 :key="module.key"
                 class="flex items-center justify-between p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
               >
@@ -735,7 +735,7 @@ const selectedUser = ref<User | null>(null)
 const moduleToDelete = ref<{ key: string; name: string } | null>(null)
 
 // User management filters and pagination
-const roleFilter = ref('')
+const roleFilter = ref<UserRole | ''>('')
 const mandantFilter = ref('')
 const moduleFilter = ref('')
 const searchQuery = ref('')

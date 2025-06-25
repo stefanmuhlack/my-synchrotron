@@ -28,7 +28,7 @@
             class="hidden"
           />
           <button
-            @click="$refs.fileInput?.click()"
+            @click="fileInput?.click()"
             class="btn-primary"
           >
             <DocumentArrowUpIcon class="w-5 h-5 mr-2" />
@@ -257,6 +257,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const selectedFile = ref<File | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const isDragging = ref(false)
 const isValidating = ref(false)
 const isInstalling = ref(false)

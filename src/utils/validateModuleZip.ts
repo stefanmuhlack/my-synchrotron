@@ -2,7 +2,6 @@ import JSZip from 'jszip'
 import type { ModuleConfig, UserRole } from '@/types'
 import { VALID_ROLES, validateRoles } from '@/types'
 import { CORE_VERSION } from '@/constants/version'
-import { useModuleStatusStore } from '@/stores/moduleStatus'
 import semver from 'semver'
 
 export interface ModuleValidationResult {
@@ -171,7 +170,6 @@ export function showVersionCompatibilityWarning(result: ModuleValidationResult):
     const message = `⚠️ Version Incompatibility Detected!\n\n${issues.join('\n')}\n\nThis module may not work correctly with the current core version.`
     
     // For admin users, allow override
-    const moduleStatusStore = useModuleStatusStore()
     // Note: In a real implementation, you'd check user role here
     
     return confirm(`${message}\n\nDo you want to continue anyway? (Admin override)`)
@@ -202,28 +200,28 @@ async function extractModuleStructure(zip: JSZip): Promise<ModuleStructure> {
   // Get all file paths
   const filePaths = Object.keys(zip.files)
   
-  for (const path of filePaths) {
-    const file = zip.files[path]
+  for (const filePath of filePaths) {
+    const file = zip.files[filePath]
     
     if (file.dir) {
-      structure.directories.push(path)
+      structure.directories.push(filePath)
     } else {
-      structure.files.push(path)
+      structure.files.push(filePath)
       
       // Check for required files
-      if (path.endsWith('module.config.ts') || path.endsWith('module.config.js')) {
+      if (filePath.endsWith('module.config.ts') || filePath.endsWith('module.config.js')) {
         structure.hasConfig = true
       }
       
-      if (path.endsWith('routes.ts') || path.endsWith('routes.js')) {
+      if (filePath.endsWith('routes.ts') || filePath.endsWith('routes.js')) {
         structure.hasRoutes = true
       }
       
-      if (path.includes('views/MainView.vue') || path.includes('views/MainView.ts')) {
+      if (filePath.includes('views/MainView.vue') || filePath.includes('views/MainView.ts')) {
         structure.hasMainView = true
       }
       
-      if (path.includes('components/Widget.vue') || path.includes('components/Widget.ts')) {
+      if (filePath.includes('components/Widget.vue') || filePath.includes('components/Widget.ts')) {
         structure.hasWidget = true
       }
     }
@@ -292,8 +290,8 @@ async function validateModuleConfig(zip: JSZip): Promise<{ config?: ModuleConfig
   
   try {
     // Find config file
-    const configFile = Object.keys(zip.files).find(path => 
-      path.endsWith('module.config.ts') || path.endsWith('module.config.js')
+    const configFile = Object.keys(zip.files).find(filePath => 
+      filePath.endsWith('module.config.ts') || filePath.endsWith('module.config.js')
     )
     
     if (!configFile) {
@@ -359,7 +357,7 @@ function parseModuleConfig(content: string): { config?: ModuleConfig, errors: st
     }
     
     // Extract array properties with robust role validation
-    const extractArrayProp = (prop: string) => {
+    const extractArrayProp = (prop: string): UserRole[] | string[] | undefined => {
       const match = configStr.match(new RegExp(`${prop}\\s*:\\s*\\[([^\\]]*?)\\]`))
       if (match) {
         const items = match[1]
@@ -367,7 +365,7 @@ function parseModuleConfig(content: string): { config?: ModuleConfig, errors: st
           .map(item => item.trim().replace(/['"`]/g, ''))
           .filter(item => item.length > 0)
         
-        // If this is rolesAllowed, validate roles
+        // If this is rolesAllowed, validate and return as UserRole[]
         if (prop === 'rolesAllowed') {
           return validateRoles(items)
         }
@@ -391,7 +389,11 @@ function parseModuleConfig(content: string): { config?: ModuleConfig, errors: st
     config.author = extractStringProp('author')
     config.compatibleWithCore = extractStringProp('compatibleWithCore')
     
-    config.rolesAllowed = extractArrayProp('rolesAllowed') || extractArrayProp('allowedRoles')
+    // Extract and validate roles
+    const rolesArray = extractArrayProp('rolesAllowed')
+    if (rolesArray) {
+      config.rolesAllowed = rolesArray as UserRole[]
+    }
     
     config.hasWidget = extractBooleanProp('hasWidget')
     config.hasDashboardWidget = extractBooleanProp('hasDashboardWidget')
@@ -511,25 +513,25 @@ async function extractFileContents(zip: JSZip): Promise<Record<string, string>> 
     'package.json'
   ]
   
-  for (const [path, file] of Object.entries(zip.files)) {
+  for (const [filePath, file] of Object.entries(zip.files)) {
     if (file.dir) continue
     
     // Extract important files or files in root directory
-    const fileName = path.split('/').pop() || ''
+    const fileName = filePath.split('/').pop() || ''
     const isImportant = importantFiles.some(important => 
       fileName.toLowerCase().includes(important.toLowerCase())
     )
     
-    const isRootFile = !path.includes('/') || path.split('/').length <= 2
+    const isRootFile = !filePath.includes('/') || filePath.split('/').length <= 2
     
     if (isImportant || isRootFile) {
       try {
         // Only extract text files (avoid binary files)
         if (isTextFile(fileName)) {
-          contents[path] = await file.async('string')
+          contents[filePath] = await file.async('string')
         }
       } catch (error) {
-        console.warn(`Failed to extract ${path}:`, error)
+        console.warn(`Failed to extract ${filePath}:`, error)
       }
     }
   }
@@ -610,7 +612,7 @@ export function generateValidationReport(result: ModuleValidationResult): string
 /**
  * Validate module ZIP from path (browser environment limitation)
  */
-export async function validateModuleZipFromPath(path: string): Promise<ModuleValidationResult> {
+export async function validateModuleZipFromPath(_filePath: string): Promise<ModuleValidationResult> {
   return {
     valid: false,
     errors: ['File path validation not supported in browser environment'],

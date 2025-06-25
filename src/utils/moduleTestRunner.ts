@@ -1,4 +1,4 @@
-import type { ModuleConfig, UserRole } from '@/types'
+import type { ModuleConfig } from '@/types'
 import { VALID_ROLES, validateRoles } from '@/types'
 import { CORE_VERSION } from '@/constants/version'
 import { useModuleStatusStore } from '@/stores/moduleStatus'
@@ -56,7 +56,7 @@ export class ModuleTestRunner {
 
     const validationPromises = Object.entries(moduleFiles).map(async ([path, importFn]) => {
       const moduleKey = this.extractModuleKey(path)
-      return this.validateModule(moduleKey, path, importFn)
+      return this.validateModule(moduleKey, importFn)
     })
 
     this.results = await Promise.all(validationPromises)
@@ -107,7 +107,7 @@ export class ModuleTestRunner {
     }
 
     const importFn = moduleFiles[modulePath]
-    const result = await this.validateModule(moduleKey, modulePath, importFn)
+    const result = await this.validateModule(moduleKey, importFn)
     
     // Update single result in store
     this.moduleStatusStore.addTestResult({
@@ -132,7 +132,6 @@ export class ModuleTestRunner {
 
   private async validateModule(
     moduleKey: string, 
-    path: string, 
     importFn: () => Promise<any>
   ): Promise<ModuleValidationResult> {
     const moduleStartTime = Date.now()
@@ -176,10 +175,10 @@ export class ModuleTestRunner {
       this.validateWidgetConsistency(config, result)
       
       // Validate routes function
-      await this.validateRoutesFunction(config, result, moduleKey)
+      await this.validateRoutesFunction(config, result)
       
       // Validate widget function if required
-      await this.validateWidgetFunction(config, result, moduleKey)
+      await this.validateWidgetFunction(config, result)
 
     } catch (error) {
       result.errors.push(`Failed to load module: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -319,7 +318,7 @@ export class ModuleTestRunner {
     }
   }
 
-  private async validateRoutesFunction(config: ModuleConfig, result: ModuleValidationResult, moduleKey: string): Promise<void> {
+  private async validateRoutesFunction(config: ModuleConfig, result: ModuleValidationResult): Promise<void> {
     if (!config.routes) {
       result.warnings.push('No routes function provided - module will not register any routes')
       return
@@ -353,7 +352,7 @@ export class ModuleTestRunner {
     }
   }
 
-  private async validateWidgetFunction(config: ModuleConfig, result: ModuleValidationResult, moduleKey: string): Promise<void> {
+  private async validateWidgetFunction(config: ModuleConfig, result: ModuleValidationResult): Promise<void> {
     const widgetFunction = config.widget || config.dashboardWidget
     
     if (!widgetFunction) return

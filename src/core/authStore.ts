@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { verifyPassword, hashPassword } from '@/utils/hashPassword'
 import type { User, UserSession, UsersData, UserRole } from '@/types'
-import { VALID_ROLES, isValidRole, ensureValidRole } from '@/types'
+import { ensureValidRole } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)

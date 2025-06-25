@@ -1,7 +1,6 @@
-import { ref, reactive, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { ModuleConfig } from '@/types'
-import { CORE_VERSION } from '@/constants/version'
 import semver from 'semver'
 
 export interface ModuleDependency {
@@ -104,7 +103,7 @@ export const useModuleLifecycleStore = defineStore('moduleLifecycle', () => {
     try {
       // Validate dependencies first
       if (config.dependencies) {
-        const dependencyCheck = await validateDependencies(moduleKey, config.dependencies)
+        const dependencyCheck = await validateDependencies(config.dependencies)
         if (!dependencyCheck.valid) {
           throw new Error(`Dependency validation failed: ${dependencyCheck.errors.join(', ')}`)
         }
@@ -258,7 +257,7 @@ export const useModuleLifecycleStore = defineStore('moduleLifecycle', () => {
       if (modulePath) {
         const importFn = moduleFiles[modulePath]
         const moduleExport = await importFn()
-        const newConfig = moduleExport.default || moduleExport.config
+        const newConfig = (moduleExport as any).default || (moduleExport as any).config
         
         if (newConfig) {
           await registerModule(moduleKey, newConfig)
@@ -294,7 +293,6 @@ export const useModuleLifecycleStore = defineStore('moduleLifecycle', () => {
   }
 
   const validateDependencies = async (
-    moduleKey: string, 
     dependencies: ModuleDependency[]
   ): Promise<{ valid: boolean; errors: string[]; warnings: string[] }> => {
     const result = { valid: true, errors: [] as string[], warnings: [] as string[] }
@@ -389,7 +387,7 @@ export const useModuleLifecycleStore = defineStore('moduleLifecycle', () => {
       details: {
         loadTime: 0,
         routeCount: 0,
-        widgetStatus: config.hasWidget ? 'unknown' : 'none'
+        widgetStatus: config.hasWidget ? 'none' : 'none'
       }
     }
     

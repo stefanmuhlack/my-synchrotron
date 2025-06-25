@@ -1,5 +1,5 @@
 import type { ModuleConfig, UserRole } from '@/types'
-import { VALID_ROLES, validateRoles } from '@/types'
+import { VALID_ROLES } from '@/types'
 import { useModulesStore } from '@/stores/modules'
 import { CORE_VERSION } from '@/constants/version'
 import semver from 'semver'
@@ -271,7 +271,6 @@ export class ModuleRegistry {
   private handleLoadingResults(): void {
     const loadedCount = this.loadingSummary.totalLoaded
     const totalFound = this.loadingSummary.totalFound
-    const skippedCount = this.loadingSummary.totalSkipped
     
     if (loadedCount === 0 && totalFound > 0) {
       // No modules loaded but modules were found
