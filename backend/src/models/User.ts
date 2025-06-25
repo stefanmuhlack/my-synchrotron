@@ -8,6 +8,8 @@ export interface IUser extends Document {
   mandant: string
   avatar?: string
   modulePermissions: string[]
+  lastLogin?: Date
+  isActive: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -18,17 +20,21 @@ const UserSchema = new Schema<IUser>({
     required: true,
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
   password: {
     type: String,
     required: true,
+    minlength: 6,
     select: false // Don't include password in queries by default
   },
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    minlength: 2,
+    maxlength: 100
   },
   role: {
     type: String,
@@ -46,15 +52,40 @@ const UserSchema = new Schema<IUser>({
     default: ''
   },
   modulePermissions: [{
-    type: String
-  }]
+    type: String,
+    trim: true
+  }],
+  lastLogin: {
+    type: Date
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  }
 }, {
   timestamps: true
 })
 
-// Index for performance
+// Indexes for performance
 UserSchema.index({ email: 1 })
 UserSchema.index({ role: 1 })
 UserSchema.index({ mandant: 1 })
+UserSchema.index({ isActive: 1 })
+
+// Virtual for id (to match frontend expectations)
+UserSchema.virtual('id').get(function() {
+  return this._id.toHexString()
+})
+
+// Ensure virtual fields are serialized
+UserSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc, ret) {
+    delete ret._id
+    delete ret.__v
+    delete ret.password
+    return ret
+  }
+})
 
 export default mongoose.model<IUser>('User', UserSchema)

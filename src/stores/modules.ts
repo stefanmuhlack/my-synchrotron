@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { ModuleState, ModuleConfig } from '@/types';
 import { validateRoles } from '@/types';
 import { useAuthStore } from '@/core/authStore';
+import { apiService } from '@/services/api';
 
 export const useModulesStore = defineStore('modules', () => {
   const modules = ref<Record<string, ModuleState>>({});
@@ -85,30 +86,41 @@ export const useModulesStore = defineStore('modules', () => {
     }
   };
 
-  const toggleModule = (key: string): void => {
+  const toggleModule = async (key: string): Promise<void> => {
     try {
-      if (modules.value[key] && !modules.value[key].error) {
-        modules.value[key].enabled = !modules.value[key].enabled;
+      if (!modules.value[key] || modules.value[key].error) return;
+      
+      // Call API to toggle module
+      const updatedModule = await apiService.toggleModule(key);
+      
+      // Update local state
+      if (modules.value[key]) {
+        modules.value[key].enabled = updatedModule.enabled;
       }
     } catch (error) {
       console.error(`Failed to toggle module ${key}:`, error);
+      setModuleError(key, error instanceof Error ? error.message : 'Toggle failed');
     }
   };
 
-  const deleteModule = (key: string): boolean => {
+  const deleteModule = async (key: string): Promise<boolean> => {
     try {
       if (!modules.value[key]) {
         console.warn(`Module ${key} not found for deletion`);
         return false;
       }
 
-      // Remove module from registry
+      // Call API to delete module
+      await apiService.deleteModule(key);
+
+      // Remove module from local registry
       delete modules.value[key];
       
       console.info(`✅ Module '${key}' deleted successfully`);
       return true;
     } catch (error) {
       console.error(`Failed to delete module ${key}:`, error);
+      setModuleError(key, error instanceof Error ? error.message : 'Delete failed');
       return false;
     }
   };
@@ -135,6 +147,30 @@ export const useModulesStore = defineStore('modules', () => {
   const clearModuleError = (key: string): void => {
     if (modules.value[key]) {
       modules.value[key].error = null;
+    }
+  };
+
+  const loadModulesFromAPI = async (): Promise<void> => {
+    loading.value = true;
+    try {
+      const apiModules = await apiService.getModules();
+      
+      // Clear existing modules
+      modules.value = {};
+      
+      // Register modules from API
+      apiModules.forEach(moduleConfig => {
+        if (moduleConfig.routePrefix) {
+          registerModule(moduleConfig.routePrefix, moduleConfig);
+        }
+      });
+      
+      console.info(`✅ Loaded ${apiModules.length} modules from API`);
+    } catch (error) {
+      console.error('Failed to load modules from API:', error);
+      throw error;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -194,6 +230,34 @@ export const useModulesStore = defineStore('modules', () => {
     }));
   });
 
+  const createModule = async (moduleData: Omit<ModuleConfig, 'id'>): Promise<boolean> => {
+    try {
+      const newModule = await apiService.createModule(moduleData);
+      registerModule(newModule.routePrefix, newModule);
+      return true;
+    } catch (error) {
+      console.error('Failed to create module:', error);
+      throw error;
+    }
+  };
+
+  const updateModule = async (key: string, moduleData: Partial<ModuleConfig>): Promise<boolean> => {
+    try {
+      const updatedModule = await apiService.updateModule(key, moduleData);
+      
+      // Update local state
+      if (modules.value[key]) {
+        modules.value[key].config = { ...modules.value[key].config, ...updatedModule };
+      }
+      
+      return true;
+    } catch (error) {
+      console.error(`Failed to update module ${key}:`, error);
+      setModuleError(key, error instanceof Error ? error.message : 'Update failed');
+      return false;
+    }
+  };
+
   return {
     modules,
     loading,
@@ -206,7 +270,10 @@ export const useModulesStore = defineStore('modules', () => {
     deleteModule,
     setModuleError,
     clearModuleError,
+    loadModulesFromAPI,
     getModuleRoutes,
-    getDashboardWidgets
+    getDashboardWidgets,
+    createModule,
+    updateModule
   };
 });

@@ -1,7 +1,6 @@
 import type { ModuleConfig } from '@/types'
 import { VALID_ROLES, validateRoles } from '@/types'
 import { CORE_VERSION } from '@/constants/version'
-import { useModuleStatusStore } from '@/stores/moduleStatus'
 import semver from 'semver'
 
 export interface ModuleValidationResult {
@@ -34,11 +33,9 @@ export interface TestReport {
 export class ModuleTestRunner {
   private results: ModuleValidationResult[] = []
   private startTime: number = 0
-  private moduleStatusStore = useModuleStatusStore()
 
   async runAllTests(): Promise<TestReport> {
     this.startTime = Date.now()
-    this.moduleStatusStore.setTestingStatus(true)
     
     console.log('🔍 Starting enhanced module validation...')
     console.log(`📋 Core version: ${CORE_VERSION}`)
@@ -48,7 +45,6 @@ export class ModuleTestRunner {
     
     if (Object.keys(moduleFiles).length === 0) {
       console.log('⚠️  No modules found in src/modules/')
-      this.moduleStatusStore.setTestingStatus(false)
       return this.generateReport([])
     }
 
@@ -60,22 +56,6 @@ export class ModuleTestRunner {
     })
 
     this.results = await Promise.all(validationPromises)
-    
-    // Update module status store
-    const statusResults = this.results.map(r => ({
-      name: r.name,
-      moduleKey: r.moduleKey,
-      version: r.version,
-      compatibleWithCore: r.compatibleWithCore,
-      isCompatible: r.isCompatible,
-      errors: r.errors,
-      warnings: r.warnings,
-      timestamp: r.lastRun || new Date().toISOString(),
-      executionTime: r.executionTime
-    }))
-    
-    this.moduleStatusStore.updateTestResults(statusResults)
-    this.moduleStatusStore.setTestingStatus(false)
     
     return this.generateReport(this.results)
   }
@@ -94,33 +74,11 @@ export class ModuleTestRunner {
         warnings: []
       }
       
-      this.moduleStatusStore.addTestResult({
-        name: moduleKey,
-        moduleKey,
-        isCompatible: false,
-        errors: result.errors,
-        warnings: result.warnings,
-        timestamp: new Date().toISOString()
-      })
-      
       return result
     }
 
     const importFn = moduleFiles[modulePath]
     const result = await this.validateModule(moduleKey, importFn)
-    
-    // Update single result in store
-    this.moduleStatusStore.addTestResult({
-      name: result.name,
-      moduleKey: result.moduleKey,
-      version: result.version,
-      compatibleWithCore: result.compatibleWithCore,
-      isCompatible: result.isCompatible,
-      errors: result.errors,
-      warnings: result.warnings,
-      timestamp: result.lastRun || new Date().toISOString(),
-      executionTime: result.executionTime
-    })
     
     return result
   }

@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { verifyPassword, hashPassword } from '@/utils/hashPassword'
-import type { User, UserSession, UsersData, UserRole } from '@/types'
+import type { User, UserSession, UserRole } from '@/types'
 import { ensureValidRole } from '@/types'
+import { apiService } from '@/services/api'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -11,26 +11,6 @@ export const useAuthStore = defineStore('auth', () => {
   const users = ref<User[]>([])
   
   const sessionDuration = 24 * 60 * 60 * 1000 // 24 hours
-
-  // Load users from JSON file with role validation
-  const loadUsers = async (): Promise<void> => {
-    try {
-      const response = await fetch('/data/users.json')
-      if (!response.ok) {
-        throw new Error('Failed to load users')
-      }
-      const data: UsersData = await response.json()
-      
-      // Validate and sanitize user roles
-      users.value = data.users.map(user => ({
-        ...user,
-        role: ensureValidRole(user.role)
-      }))
-    } catch (err) {
-      console.error('Failed to load users:', err)
-      error.value = 'Failed to load user data'
-    }
-  }
 
   // Multi-tenant filtering with robust role checking
   const accessibleUsers = computed(() => {
@@ -71,43 +51,13 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
 
-      // Load users if not already loaded
-      if (users.value.length === 0) {
-        await loadUsers()
-      }
-
-      // Find user
-      const foundUser = users.value.find(u => 
-        u.email.toLowerCase() === email.toLowerCase().trim()
-      )
-
-      if (!foundUser) {
-        error.value = 'Invalid email or password'
-        return false
-      }
-
-      // For demo purposes, check both hashed password and plain text password
-      let isPasswordValid = false
+      // Call API login
+      const loginResponse = await apiService.login({ email, password })
       
-      if (foundUser.hashedPassword) {
-        // Try hashed password first
-        isPasswordValid = await verifyPassword(password, foundUser.hashedPassword)
-      }
-      
-      // If hashed password fails or doesn't exist, try plain text (for backward compatibility)
-      if (!isPasswordValid && foundUser.password) {
-        isPasswordValid = foundUser.password === password
-      }
-      
-      if (!isPasswordValid) {
-        error.value = 'Invalid email or password'
-        return false
-      }
-
       // Validate and ensure role is correct
       const validatedUser: User = {
-        ...foundUser,
-        role: ensureValidRole(foundUser.role)
+        ...loginResponse.user,
+        role: ensureValidRole(loginResponse.user.role)
       }
 
       // Create session
@@ -121,10 +71,15 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = session.user
       localStorage.setItem('userSession', JSON.stringify(session))
 
+      // Load users for admin/coach roles
+      if (validatedUser.role === 'admin' || validatedUser.role === 'coach') {
+        await loadUsers()
+      }
+
       return true
     } catch (err) {
       console.error('Login error:', err)
-      error.value = 'Login failed. Please try again.'
+      error.value = err instanceof Error ? err.message : 'Login failed. Please try again.'
       return false
     } finally {
       loading.value = false
@@ -134,14 +89,13 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = (): void => {
     user.value = null
     error.value = null
+    users.value = []
     localStorage.removeItem('userSession')
+    apiService.logout()
   }
 
   const initAuth = async (): Promise<void> => {
     try {
-      // Load users first
-      await loadUsers()
-
       // Check for existing session
       const storedSession = localStorage.getItem('userSession')
       if (!storedSession) return
@@ -154,19 +108,43 @@ export const useAuthStore = defineStore('auth', () => {
         return
       }
 
-      // Validate user still exists and data is current
-      const currentUser = users.value.find(u => u.id === session.user.id)
-      if (currentUser) {
+      // Verify token with backend
+      try {
+        const currentUser = await apiService.verifyToken()
+        
         user.value = {
           ...currentUser,
           role: ensureValidRole(currentUser.role)
         }
-      } else {
+
+        // Load users for admin/coach roles
+        if (user.value.role === 'admin' || user.value.role === 'coach') {
+          await loadUsers()
+        }
+      } catch (tokenError) {
+        console.warn('Token verification failed:', tokenError)
         localStorage.removeItem('userSession')
+        apiService.logout()
       }
     } catch (err) {
       console.error('Failed to initialize auth:', err)
       localStorage.removeItem('userSession')
+      apiService.logout()
+    }
+  }
+
+  const loadUsers = async (): Promise<void> => {
+    try {
+      const fetchedUsers = await apiService.getUsers()
+      
+      // Validate and sanitize user roles
+      users.value = fetchedUsers.map(u => ({
+        ...u,
+        role: ensureValidRole(u.role)
+      }))
+    } catch (err) {
+      console.error('Failed to load users:', err)
+      error.value = 'Failed to load user data'
     }
   }
 
@@ -192,32 +170,23 @@ export const useAuthStore = defineStore('auth', () => {
     return targetUserId === user.value.id
   }
 
-  // CRUD operations for admin with role validation
+  // CRUD operations for admin with API integration
   const createUser = async (userData: Omit<User, 'id' | 'hashedPassword'> & { password: string }): Promise<boolean> => {
     if (!hasRole('admin')) return false
     
     try {
-      // Validate role
-      const validatedRole = ensureValidRole(userData.role)
-      
-      const hashedPassword = await hashPassword(userData.password)
-      
-      const newUser: User = {
+      const newUser = await apiService.createUser({
         ...userData,
-        id: Date.now().toString(),
-        role: validatedRole,
-        hashedPassword,
-        modulePermissions: userData.modulePermissions || []
-      }
+        role: ensureValidRole(userData.role),
+        modulePermissions: userData.role === 'admin' ? [] : userData.modulePermissions || []
+      })
       
-      // Remove password from the object before storing
-      const { password, ...userWithoutPassword } = userData
-      Object.assign(newUser, userWithoutPassword)
-      
+      // Add to local users array
       users.value.push(newUser)
       return true
     } catch (err) {
       console.error('Failed to create user:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to create user'
       return false
     }
   }
@@ -226,9 +195,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (!hasRole('admin') && !canAccessUser(userId)) return false
     
     try {
-      const userIndex = users.value.findIndex(u => u.id === userId)
-      if (userIndex === -1) return false
-      
       const updateData = { ...userData }
       
       // Validate role if provided
@@ -236,22 +202,23 @@ export const useAuthStore = defineStore('auth', () => {
         updateData.role = ensureValidRole(updateData.role)
       }
       
-      // Hash password if provided
-      if (userData.password) {
-        updateData.hashedPassword = await hashPassword(userData.password)
-        delete updateData.password
-      }
+      const updatedUser = await apiService.updateUser(userId, updateData)
       
-      users.value[userIndex] = { ...users.value[userIndex], ...updateData }
+      // Update local users array
+      const userIndex = users.value.findIndex(u => u.id === userId)
+      if (userIndex !== -1) {
+        users.value[userIndex] = updatedUser
+      }
       
       // Update current user if editing self
       if (user.value?.id === userId) {
-        user.value = { ...user.value, ...updateData }
+        user.value = { ...user.value, ...updatedUser }
       }
       
       return true
     } catch (err) {
       console.error('Failed to update user:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to update user'
       return false
     }
   }
@@ -260,13 +227,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (!hasRole('admin') || userId === user.value?.id) return false
     
     try {
-      const userIndex = users.value.findIndex(u => u.id === userId)
-      if (userIndex === -1) return false
+      await apiService.deleteUser(userId)
       
-      users.value.splice(userIndex, 1)
+      // Remove from local users array
+      const userIndex = users.value.findIndex(u => u.id === userId)
+      if (userIndex !== -1) {
+        users.value.splice(userIndex, 1)
+      }
+      
       return true
     } catch (err) {
       console.error('Failed to delete user:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to delete user'
       return false
     }
   }
@@ -275,10 +247,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (!hasRole('admin')) return false
     
     try {
-      const userIndex = users.value.findIndex(u => u.id === userId)
-      if (userIndex === -1) return false
+      const updatedUser = await apiService.updateUserPermissions(userId, modulePermissions)
       
-      users.value[userIndex].modulePermissions = modulePermissions
+      // Update local users array
+      const userIndex = users.value.findIndex(u => u.id === userId)
+      if (userIndex !== -1) {
+        users.value[userIndex] = updatedUser
+      }
       
       // Update current user if editing self
       if (user.value?.id === userId) {
@@ -288,7 +263,17 @@ export const useAuthStore = defineStore('auth', () => {
       return true
     } catch (err) {
       console.error('Failed to update user module permissions:', err)
+      error.value = err instanceof Error ? err.message : 'Failed to update user permissions'
       return false
+    }
+  }
+
+  const getUserStats = async () => {
+    try {
+      return await apiService.getUserStats()
+    } catch (err) {
+      console.error('Failed to get user stats:', err)
+      throw err
     }
   }
 
@@ -308,6 +293,7 @@ export const useAuthStore = defineStore('auth', () => {
     updateUser,
     deleteUser,
     updateUserModulePermissions,
-    loadUsers
+    loadUsers,
+    getUserStats
   }
 })
